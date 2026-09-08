@@ -19,18 +19,13 @@ COOLDOWN = timedelta(minutes=2)
 REVOLUT_PAYMENT_URL = "https://revolut.me/ayberkqvg8"
 PAYPAL_PAYMENT_URL = "https://paypal.me/aydmraybrk"
 
+# Your Discord user ID
+OWNER_ID = 1137740302094966884
+
 
 # =========================================================
 # BOT TOKEN
 # =========================================================
-
-# IMPORTANT:
-# Do NOT put your token directly into this file.
-#
-# 1.Windows PowerShell:
-# 2.cd "C:\Users\user\Downloads\Dc Bot"
-# 3.$env:DISCORD_BOT_TOKEN="DEIN_NEUES_TOKEN"
-# 4.py bot.py
 
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
@@ -47,12 +42,284 @@ ticket_cooldowns = {}
 # =========================================================
 
 intents = discord.Intents.default()
-
-# Required for message content
 intents.message_content = True
-
-# Required for on_member_join
 intents.members = True
+
+
+# =========================================================
+# PAYMENT CONFIRMATION MODAL
+# =========================================================
+
+class PaymentConfirmationModal(
+    discord.ui.Modal,
+    title="Confirm Payment"
+):
+
+    payment_method = discord.ui.TextInput(
+        label="Payment method",
+        placeholder="Revolut or PayPal",
+        style=discord.TextStyle.short,
+        required=True,
+        max_length=50
+    )
+
+    payment_note = discord.ui.TextInput(
+        label="Payment information",
+        placeholder="Add any information about your payment.",
+        style=discord.TextStyle.paragraph,
+        required=False,
+        max_length=500
+    )
+
+    async def on_submit(
+        self,
+        interaction: discord.Interaction
+    ):
+
+        channel = interaction.channel
+        user = interaction.user
+
+        if channel is None:
+            return
+
+        # Only allow this inside tickets/orders
+        if not (
+            channel.name.startswith("ticket-")
+            or channel.name.startswith("order-")
+        ):
+            await interaction.response.send_message(
+                "❌ This button can only be used inside an order ticket.",
+                ephemeral=True
+            )
+            return
+
+        # Prevent duplicate confirmations
+        if (
+            "payment reported" in channel.topic.lower()
+            if channel.topic
+            else False
+        ):
+            await interaction.response.send_message(
+                "⚠️ Payment information has already been submitted.",
+                ephemeral=True
+            )
+            return
+
+        # =================================================
+        # GET BOT OWNER
+        # =================================================
+
+        owner = None
+
+        try:
+            application = await interaction.client.application_info()
+            owner = application.owner
+
+        except Exception as error:
+            print(
+                f"⚠️ Could not get bot owner: {error}"
+            )
+
+        # =================================================
+        # MARK PAYMENT AS REPORTED
+        # =================================================
+
+        try:
+            await channel.edit(
+                topic=(
+                    f"Payment reported by {user} "
+                    f"(ID: {user.id})"
+                )
+            )
+
+        except discord.HTTPException:
+            pass
+
+        # =================================================
+        # CREATE PAYMENT NOTIFICATION
+        # =================================================
+
+        embed = discord.Embed(
+            title="💰 Payment Confirmation",
+            description=(
+                f"{user.mention} has submitted "
+                "payment information."
+            ),
+            color=discord.Color.green()
+        )
+
+        embed.add_field(
+            name="👤 Customer",
+            value=f"{user.mention}\n`{user}`",
+            inline=False
+        )
+
+        embed.add_field(
+            name="🆔 Customer ID",
+            value=str(user.id),
+            inline=True
+        )
+
+        embed.add_field(
+            name="🎫 Ticket",
+            value=channel.mention,
+            inline=True
+        )
+
+        embed.add_field(
+            name="💳 Payment Method",
+            value=self.payment_method.value,
+            inline=False
+        )
+
+        embed.add_field(
+            name="📝 Additional Information",
+            value=self.payment_note.value or "None",
+            inline=False
+        )
+
+        embed.add_field(
+            name="🔎 Status",
+            value=(
+                "⏳ Awaiting manual verification."
+            ),
+            inline=False
+        )
+
+        embed.set_footer(
+            text="Please manually verify the payment."
+        )
+
+        # =================================================
+        # SEND INFORMATION TO OWNER
+        # =================================================
+
+        if owner is not None:
+
+            try:
+                await owner.send(
+                    embed=embed
+                )
+
+                print(
+                    f"✅ Payment information sent to owner "
+                    f"for {user}."
+                )
+
+            except discord.Forbidden:
+
+                print(
+                    "⚠️ Could not DM the bot owner."
+                )
+
+            except discord.HTTPException as error:
+
+                print(
+                    f"⚠️ Owner DM error: {error}"
+                )
+
+        # =================================================
+        # CUSTOMER CONFIRMATION
+        # =================================================
+
+        await interaction.response.send_message(
+
+            "✅ **Payment information submitted!**\n\n"
+
+            f"💳 Payment method: "
+            f"**{self.payment_method.value}**\n\n"
+
+            "Your payment information has been sent "
+            "to the server owner for manual verification.",
+
+            ephemeral=True
+        )
+
+        # =================================================
+        # MESSAGE INSIDE TICKET
+        # =================================================
+
+        try:
+
+            await channel.send(
+
+                f"💰 **Payment information submitted by "
+                f"{user.mention}.**\n\n"
+
+                "⏳ The server owner has been notified "
+                "and will manually verify the payment."
+            )
+
+        except discord.HTTPException as error:
+
+            print(
+                f"⚠️ Could not send payment notification: {error}"
+            )
+
+
+# =========================================================
+# PAYMENT CONFIRM BUTTON
+# =========================================================
+
+class PaymentCompletedButton(
+    discord.ui.Button
+):
+
+    def __init__(self):
+
+        super().__init__(
+            label="✅ Confirm Payment",
+            style=discord.ButtonStyle.green,
+            custom_id="payment_completed"
+        )
+
+    async def callback(
+        self,
+        interaction: discord.Interaction
+    ):
+
+        channel = interaction.channel
+
+        if channel is None:
+            return
+
+        # Only allow inside tickets/orders
+        if not (
+            channel.name.startswith("ticket-")
+            or channel.name.startswith("order-")
+        ):
+
+            await interaction.response.send_message(
+
+                "❌ This button can only be used "
+                "inside an order ticket.",
+
+                ephemeral=True
+            )
+
+            return
+
+        # Prevent duplicate confirmations
+        if (
+            "payment reported" in channel.topic.lower()
+            if channel.topic
+            else False
+        ):
+
+            await interaction.response.send_message(
+
+                "⚠️ Payment information has already "
+                "been submitted.",
+
+                ephemeral=True
+            )
+
+            return
+
+        # Open confirmation form
+        await interaction.response.send_modal(
+            PaymentConfirmationModal()
+        )
 
 
 # =========================================================
@@ -62,9 +329,9 @@ intents.members = True
 class PaymentButtons(discord.ui.View):
 
     def __init__(self):
+
         super().__init__(timeout=None)
 
-        # Revolut
         self.add_item(
             discord.ui.Button(
                 label="💜 Pay with Revolut",
@@ -73,13 +340,16 @@ class PaymentButtons(discord.ui.View):
             )
         )
 
-        # PayPal
         self.add_item(
             discord.ui.Button(
                 label="💙 Pay with PayPal",
                 style=discord.ButtonStyle.link,
                 url=PAYPAL_PAYMENT_URL
             )
+        )
+
+        self.add_item(
+            PaymentCompletedButton()
         )
 
 
@@ -112,10 +382,12 @@ class TicketCloseButton(discord.ui.View):
             channel.name.startswith("ticket-")
             or channel.name.startswith("order-")
         ):
+
             await interaction.response.send_message(
                 "❌ This channel is not a ticket.",
                 ephemeral=True
             )
+
             return
 
         await interaction.response.send_message(
@@ -125,6 +397,7 @@ class TicketCloseButton(discord.ui.View):
         await asyncio.sleep(15)
 
         try:
+
             await channel.delete(
                 reason="Ticket closed"
             )
@@ -133,11 +406,13 @@ class TicketCloseButton(discord.ui.View):
             pass
 
         except discord.Forbidden:
+
             print(
                 "❌ I don't have permission to delete this channel."
             )
 
         except discord.HTTPException as error:
+
             print(
                 f"❌ Channel deletion error: {error}"
             )
@@ -189,6 +464,7 @@ class BotOrderModal(
         package_name,
         package_price
     ):
+
         super().__init__()
 
         self.package_name = package_name
@@ -224,10 +500,7 @@ class BotOrderModal(
 
         try:
 
-            application = (
-                await interaction.client.application_info()
-            )
-
+            application = await interaction.client.application_info()
             owner = application.owner
 
         except Exception as error:
@@ -300,17 +573,14 @@ class BotOrderModal(
                 "We will review your request and work on it "
                 "within a maximum of **4 days**.\n\n"
 
-                "💳 **Payment**\n"
-                f"Please use one of the buttons below to pay "
-                f"**{self.package_price}**.\n\n"
+                f"💳 **Payment: {self.package_price}**\n\n"
 
-                "After payment, please let us know in this "
-                "ticket so the payment can be checked.\n\n"
+                "Please choose one of the payment methods below.\n\n"
 
-                "If you have any changes, questions, or "
-                "additional requests, please contact "
-                "the server owner: <@1137740302094966884> "
-                "will contact you as soon as possible.",
+                "After completing the payment, click "
+                "**✅ Confirm Payment**.\n\n"
+
+                "⚠️ Payment completion is manually verified.",
 
                 embed=embed,
 
@@ -318,7 +588,7 @@ class BotOrderModal(
             )
 
             # =================================================
-            # CLOSE TICKET BUTTON
+            # CLOSE BUTTON
             # =================================================
 
             await channel.send(
@@ -373,8 +643,8 @@ class BotOrderModal(
             f"Selected package: **{self.package_name}** "
             f"({self.package_price})\n\n"
 
-            "Please complete the payment using one of the "
-            "payment buttons in the ticket.",
+            "Please complete your payment and then "
+            "click **✅ Confirm Payment**.",
 
             ephemeral=True
         )
@@ -387,8 +657,6 @@ class BotOrderModal(
 class PackageButton(discord.ui.View):
 
     def __init__(self):
-
-        # Package selection expires after 2 minutes.
         super().__init__(timeout=120)
 
     async def delete_package_message(
@@ -412,6 +680,10 @@ class PackageButton(discord.ui.View):
                 f"⚠️ Could not delete package message: {error}"
             )
 
+    # =====================================================
+    # STARTER
+    # =====================================================
+
     @discord.ui.button(
         label="🟢 Starter — €4.99",
         style=discord.ButtonStyle.green,
@@ -423,9 +695,7 @@ class PackageButton(discord.ui.View):
         button: discord.ui.Button
     ):
 
-        await self.delete_package_message(
-            interaction
-        )
+        await self.delete_package_message(interaction)
 
         await interaction.response.send_modal(
             BotOrderModal(
@@ -433,6 +703,10 @@ class PackageButton(discord.ui.View):
                 "€4.99"
             )
         )
+
+    # =====================================================
+    # PRO
+    # =====================================================
 
     @discord.ui.button(
         label="🔵 Pro — €9.99",
@@ -445,9 +719,7 @@ class PackageButton(discord.ui.View):
         button: discord.ui.Button
     ):
 
-        await self.delete_package_message(
-            interaction
-        )
+        await self.delete_package_message(interaction)
 
         await interaction.response.send_modal(
             BotOrderModal(
@@ -455,6 +727,10 @@ class PackageButton(discord.ui.View):
                 "€9.99"
             )
         )
+
+    # =====================================================
+    # ADVANCED
+    # =====================================================
 
     @discord.ui.button(
         label="🟣 Advanced — €14.99",
@@ -467,9 +743,7 @@ class PackageButton(discord.ui.View):
         button: discord.ui.Button
     ):
 
-        await self.delete_package_message(
-            interaction
-        )
+        await self.delete_package_message(interaction)
 
         await interaction.response.send_modal(
             BotOrderModal(
@@ -486,8 +760,11 @@ class PackageButton(discord.ui.View):
 class TicketTypeButton(discord.ui.View):
 
     def __init__(self):
-
         super().__init__(timeout=None)
+
+    # =====================================================
+    # SUPPORT
+    # =====================================================
 
     @discord.ui.button(
         label="🛠️ Support",
@@ -506,27 +783,11 @@ class TicketTypeButton(discord.ui.View):
 
             "Please describe your problem here.\n"
             "A staff member will help you as soon as possible."
-
         )
 
-        try:
-
-            message = (
-                await interaction.original_response()
-            )
-
-            await asyncio.sleep(15)
-
-            await message.delete()
-
-        except discord.NotFound:
-            pass
-
-        except discord.HTTPException as error:
-
-            print(
-                f"⚠️ Could not delete support message: {error}"
-            )
+    # =====================================================
+    # ORDER
+    # =====================================================
 
     @discord.ui.button(
         label="🤖 Order Now",
@@ -539,20 +800,13 @@ class TicketTypeButton(discord.ui.View):
         button: discord.ui.Button
     ):
 
-        # =================================================
-        # PACKAGE EMBED
-        # =================================================
-
         embed = discord.Embed(
-
             title="🤖 Custom Discord Bots",
-
             description=(
                 "Choose the package that fits your project.\n\n"
                 "All packages are customized according to "
                 "your requirements."
             ),
-
             color=discord.Color.blurple()
         )
 
@@ -561,27 +815,18 @@ class TicketTypeButton(discord.ui.View):
         # =================================================
 
         embed.add_field(
-
             name="🟢 STARTER — €4.99",
-
             value=(
                 "*Great for simple projects*\n\n"
-
                 "👋 **Welcome System**\n"
                 "Automatically welcomes new members.\n\n"
-
                 "⚡ **Basic Commands**\n"
-                "Simple commands like help, ping and "
-                "server information.\n\n"
-
+                "Help, ping and server information.\n\n"
                 "💬 **Custom Responses**\n"
-                "Automatic replies to selected words "
-                "or messages.\n\n"
-
+                "Automatic replies to selected messages.\n\n"
                 "🛠️ **Basic Configuration**\n"
                 "Basic settings and customization."
             ),
-
             inline=False
         )
 
@@ -590,29 +835,20 @@ class TicketTypeButton(discord.ui.View):
         # =================================================
 
         embed.add_field(
-
             name="🔵 PRO — €9.99",
-
             value=(
                 "*Great for growing Discord servers*\n\n"
-
                 "✅ **Everything in Starter**\n"
                 "Includes all Starter features.\n\n"
-
                 "🛡️ **Moderation Commands**\n"
                 "Kick, ban, timeout and message management.\n\n"
-
                 "🎯 **Custom Commands**\n"
                 "Commands created specifically for your server.\n\n"
-
                 "🎫 **Ticket System**\n"
                 "Private support and order tickets.\n\n"
-
                 "⚙️ **Advanced Configuration**\n"
-                "More control over roles, channels and "
-                "bot behaviour."
+                "More control over roles, channels and bot behaviour."
             ),
-
             inline=False
         )
 
@@ -621,49 +857,36 @@ class TicketTypeButton(discord.ui.View):
         # =================================================
 
         embed.add_field(
-
             name="🟣 ADVANCED — €14.99",
-
             value=(
                 "*Great for advanced custom projects*\n\n"
-
                 "✅ **Everything in Pro**\n"
                 "Includes all Pro features.\n\n"
-
                 "🗄️ **Database Features**\n"
-                "Store data such as points, levels and "
-                "statistics.\n\n"
-
+                "Store points, levels and statistics.\n\n"
                 "🔄 **Advanced Automation**\n"
                 "Automate multiple actions and systems.\n\n"
-
                 "🔐 **Advanced Permissions**\n"
-                "Detailed control over who can use features.\n\n"
-
+                "Detailed control over features.\n\n"
                 "📊 **Custom Server Systems**\n"
                 "Systems designed specifically for your server.\n\n"
-
                 "🧩 **Advanced Custom Features**\n"
                 "Extra functionality based on your project."
             ),
-
             inline=False
         )
 
         # =================================================
-        # CALL TO ACTION
+        # READY
         # =================================================
 
         embed.add_field(
-
             name="🚀 Ready to build your bot?",
-
             value=(
-                "Choose the package you want below and "
-                "tell us what your bot should do.\n\n"
+                "Choose your package below and tell us "
+                "what your bot should do.\n\n"
                 "We'll review your idea and get started!"
             ),
-
             inline=False
         )
 
@@ -671,13 +894,10 @@ class TicketTypeButton(discord.ui.View):
             text="⏳ Package selection expires after 2 minutes."
         )
 
-        # =================================================
-        # SEND PACKAGE PAGE
-        # =================================================
-
         await interaction.response.send_message(
             embed=embed,
-            view=PackageButton()
+            view=PackageButton(),
+            ephemeral=True
         )
 
 
@@ -688,7 +908,6 @@ class TicketTypeButton(discord.ui.View):
 class TicketButton(discord.ui.View):
 
     def __init__(self):
-
         super().__init__(timeout=None)
 
     @discord.ui.button(
@@ -729,10 +948,18 @@ class TicketButton(discord.ui.View):
             name=f"ticket-{user.id}"
         )
 
-        if existing_ticket is not None:
+        existing_order = discord.utils.get(
+            guild.text_channels,
+            name=f"order-{user.id}"
+        )
+
+        if (
+            existing_ticket is not None
+            or existing_order is not None
+        ):
 
             await interaction.followup.send(
-                "❌ You already have an open ticket.",
+                "❌ You already have an open ticket or order.",
                 ephemeral=True
             )
 
@@ -774,17 +1001,14 @@ class TicketButton(discord.ui.View):
                 return
 
         # =================================================
-        # GET BOT OWNER
+        # GET OWNER
         # =================================================
 
         owner = None
 
         try:
 
-            application = (
-                await interaction.client.application_info()
-            )
-
+            application = await interaction.client.application_info()
             owner = application.owner
 
         except Exception as error:
@@ -820,12 +1044,10 @@ class TicketButton(discord.ui.View):
 
         if owner is not None:
 
-            overwrites[owner] = (
-                discord.PermissionOverwrite(
-                    view_channel=True,
-                    send_messages=True,
-                    read_message_history=True
-                )
+            overwrites[owner] = discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True
             )
 
         # =================================================
@@ -904,15 +1126,10 @@ class TicketButton(discord.ui.View):
             await channel.send(
 
                 "🎫 **What do you need help with?**\n\n"
-
                 "Please choose an option below:",
 
                 view=TicketTypeButton()
             )
-
-            # =================================================
-            # CLOSE TICKET BUTTON
-            # =================================================
 
             await channel.send(
 
@@ -937,7 +1154,6 @@ class TicketBot(commands.Bot):
 
     async def setup_hook(self):
 
-        # Persistent views
         self.add_view(
             TicketButton()
         )
@@ -960,9 +1176,7 @@ class TicketBot(commands.Bot):
 # =========================================================
 
 bot = TicketBot(
-
     command_prefix="!",
-
     intents=intents
 )
 
@@ -977,9 +1191,7 @@ async def on_member_join(
 ):
 
     channel = discord.utils.get(
-
         member.guild.text_channels,
-
         name=WELCOME_CHANNEL_NAME
     )
 
@@ -995,14 +1207,11 @@ async def on_member_join(
     try:
 
         embed = discord.Embed(
-
             title="👋 Welcome!",
-
             description=(
                 f"Welcome {member.mention}!\n\n"
                 "Thank you for joining! 🎉"
             ),
-
             color=discord.Color.blurple()
         )
 
@@ -1076,9 +1285,7 @@ async def on_ready():
     # =====================================================
 
     channel = discord.utils.get(
-
         bot.get_all_channels(),
-
         name=TICKET_CHANNEL_NAME
     )
 
@@ -1143,21 +1350,24 @@ async def on_ready():
             title="🎫 Support & Orders",
 
             description=(
+
                 "Need help or want to order a custom bot?\n\n"
 
                 "Click **🎫 Create Ticket** to open a "
                 "private ticket.\n\n"
 
                 "💳 **Payment Methods**\n"
-                "We currently accept **Revolut, PayPal "
-                "and TWINT** only."
+
+                "We currently accept **Revolut and PayPal**."
             ),
 
             color=discord.Color.blurple()
         )
 
         embed.set_footer(
+
             text=(
+
                 "Please make sure you can use one of "
                 "these payment methods."
             )
@@ -1177,6 +1387,7 @@ async def on_ready():
     except discord.Forbidden:
 
         print(
+
             "❌ I don't have permission to send "
             "messages in the ticket channel."
         )
@@ -1184,6 +1395,7 @@ async def on_ready():
     except discord.HTTPException as error:
 
         print(
+
             f"❌ Could not create ticket panel: {error}"
         )
 
