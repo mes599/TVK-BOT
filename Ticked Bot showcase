@@ -7,18 +7,18 @@ from discord.ext import commands
 # SETTINGS
 # =========================================================
 
-SHOWCASE_CHANNEL_NAME = "ticket-bot🎫"
-TICKET_CATEGORY_NAME = "Tickets"
+SHOWCASE_CHANNEL_NAME = "ticket-demo-bot🎫"
+TICKET_CATEGORY_NAME = "Bot Showcases🤖"
 
 
 # =========================================================
 # BOT TOKEN
 # =========================================================
 
-# The token is taken from the Render environment variable:
+# Set this in Render:
 # DISCORD_BOT_TOKEN
 #
-# NEVER put your real bot token directly into this file.
+# NEVER put your real token directly into this file.
 
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
@@ -27,37 +27,237 @@ BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 # INTENTS
 # =========================================================
 
-# This bot does NOT need privileged intents.
+# This bot does not need privileged intents.
 intents = discord.Intents.default()
 
 
 # =========================================================
-# CREATE TICKET
+# DEMO BUTTON RESPONSES
 # =========================================================
 
-async def create_ticket(
-    interaction: discord.Interaction,
-    ticket_type: str = "Demo"
+class DemoActionView(discord.ui.View):
+
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    # -----------------------------------------------------
+    # ORDER BOT
+    # -----------------------------------------------------
+
+    @discord.ui.button(
+        label="🤖 Order Bot",
+        style=discord.ButtonStyle.blurple,
+        custom_id="showcase_order_bot"
+    )
+    async def order_bot(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
+
+        embed = discord.Embed(
+            title="🤖 Order Bot — Demo",
+            description=(
+                "🚀 **You just tested one possible feature!**\n\n"
+
+                "This button could open an order system, "
+                "display your services, show your packages, "
+                "start a purchase process, open another menu, "
+                "or perform a completely different action.\n\n"
+
+                "💬 **And this message can be changed too.**\n\n"
+
+                "Every part of your bot can be designed around "
+                "your own idea. The text you are reading right now "
+                "is only an example for this showcase.\n\n"
+
+                "🎨 You can choose your own colors.\n"
+                "📝 You can choose your own texts.\n"
+                "🔘 You can choose your own buttons.\n"
+                "⚙️ You can choose your own functions.\n"
+                "✨ You can choose your own design.\n\n"
+
+                "💡 **Your idea → Your design → Your bot.**"
+            ),
+            color=discord.Color.blue()
+        )
+
+        embed.add_field(
+            name="🔧 Completely Customizable",
+            value=(
+                "Want this button to do something completely "
+                "different? No problem. The function, message, "
+                "name and appearance can all be changed."
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="🚀 Unlimited Possibilities",
+            value=(
+                "A bot does not have to stop at two or three "
+                "buttons. You can have several buttons, menus, "
+                "different pages and many custom functions."
+            ),
+            inline=False
+        )
+
+        embed.set_footer(
+            text="Demo feature • Everything can be customized"
+        )
+
+        await interaction.response.send_message(
+            embed=embed,
+            ephemeral=True
+        )
+
+    # -----------------------------------------------------
+    # YOUR CHOICE
+    # -----------------------------------------------------
+
+    @discord.ui.button(
+        label="✨ Your Choice",
+        style=discord.ButtonStyle.green,
+        custom_id="showcase_your_choice"
+    )
+    async def your_choice(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
+
+        embed = discord.Embed(
+            title="✨ Your Choice — Demo",
+            description=(
+                "💡 **This button is an example of YOUR choice.**\n\n"
+
+                "Imagine that this button does exactly what you "
+                "want it to do.\n\n"
+
+                "Maybe it opens a menu.\n"
+                "Maybe it shows information.\n"
+                "Maybe it starts an application.\n"
+                "Maybe it opens another ticket.\n"
+                "Maybe it connects to another system.\n"
+                "Or maybe it does something completely unique.\n\n"
+
+                "🎨 **You decide.**\n\n"
+
+                "The name of the button, the emoji, the color, "
+                "the message, the function and everything around "
+                "it can be changed to match your vision.\n\n"
+
+                "🔥 This showcase is only here to give you an idea "
+                "of what your own custom Discord bot could look like."
+            ),
+            color=discord.Color.green()
+        )
+
+        embed.add_field(
+            name="🔘 More Than Just 2–3 Buttons",
+            value=(
+                "You are not limited to a small number of buttons. "
+                "Your bot can have multiple buttons, menus and "
+                "different interactive systems depending on what "
+                "you need."
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="🎯 Built Around Your Vision",
+            value=(
+                "Instead of changing your idea to fit a standard "
+                "bot, the bot can be designed around your idea."
+            ),
+            inline=False
+        )
+
+        embed.set_footer(
+            text="Your choice • Your design • Your bot"
+        )
+
+        await interaction.response.send_message(
+            embed=embed,
+            ephemeral=True
+        )
+
+
+# =========================================================
+# CLOSE TICKET BUTTON
+# =========================================================
+
+class CloseTicketView(discord.ui.View):
+
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="🔒 Close Ticket",
+        style=discord.ButtonStyle.red,
+        custom_id="showcase_close_ticket"
+    )
+    async def close_ticket(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
+
+        channel = interaction.channel
+
+        if channel is None:
+            return
+
+        # Make sure this is actually a demo ticket.
+        if (
+            not channel.topic
+            or "showcase-owner:" not in channel.topic
+        ):
+            await interaction.response.send_message(
+                "❌ This is not a demo ticket.",
+                ephemeral=True
+            )
+            return
+
+        await interaction.response.send_message(
+            "🔒 **Closing this demo ticket...**",
+            ephemeral=False
+        )
+
+        try:
+            await channel.delete()
+
+        except discord.Forbidden:
+            print(
+                "❌ I don't have permission to delete "
+                "the demo ticket."
+            )
+
+        except discord.HTTPException as error:
+            print(
+                f"❌ Could not delete demo ticket: {error}"
+            )
+
+
+# =========================================================
+# CREATE DEMO TICKET
+# =========================================================
+
+async def create_demo_ticket(
+    interaction: discord.Interaction
 ):
 
     guild = interaction.guild
 
-    # -----------------------------------------------------
-    # SERVER CHECK
-    # -----------------------------------------------------
-
     if guild is None:
-
         await interaction.response.send_message(
-            "❌ This can only be used inside a server.",
+            "❌ This demo can only be used inside a server.",
             ephemeral=True
         )
-
         return
 
-
     # -----------------------------------------------------
-    # CHECK IF USER ALREADY HAS A TICKET
+    # CHECK FOR EXISTING DEMO TICKET
     # -----------------------------------------------------
 
     existing_ticket = None
@@ -66,34 +266,32 @@ async def create_ticket(
 
         if (
             channel.topic
-            and f"ticket-owner:{interaction.user.id}" in channel.topic
+            and f"showcase-owner:{interaction.user.id}"
+            in channel.topic
         ):
-
             existing_ticket = channel
-
             break
-
 
     if existing_ticket:
 
         await interaction.response.send_message(
-            f"❌ You already have an open ticket: "
-            f"{existing_ticket.mention}",
+            (
+                "✨ **You already have a demo ticket!**\n\n"
+                f"➡️ {existing_ticket.mention}"
+            ),
             ephemeral=True
         )
 
         return
 
-
     # -----------------------------------------------------
-    # FIND OR CREATE TICKET CATEGORY
+    # FIND / CREATE CATEGORY
     # -----------------------------------------------------
 
     category = discord.utils.get(
         guild.categories,
         name=TICKET_CATEGORY_NAME
     )
-
 
     if category is None:
 
@@ -106,7 +304,10 @@ async def create_ticket(
         except discord.Forbidden:
 
             await interaction.response.send_message(
-                "❌ I don't have permission to create a category.",
+                (
+                    "❌ I don't have permission to create "
+                    "the showcase category."
+                ),
                 ephemeral=True
             )
 
@@ -115,35 +316,29 @@ async def create_ticket(
         except discord.HTTPException as error:
 
             await interaction.response.send_message(
-                f"❌ Could not create the ticket category: {error}",
+                f"❌ Could not create the category: {error}",
                 ephemeral=True
             )
 
             return
 
-
     # -----------------------------------------------------
-    # FIND BOT MEMBER
+    # GET BOT MEMBER
     # -----------------------------------------------------
 
     bot_member = guild.me
 
-    if bot_member is None:
-
-        bot_member = guild.get_member(
-            bot.user.id
-        )
-
+    if bot_member is None and bot.user is not None:
+        bot_member = guild.get_member(bot.user.id)
 
     if bot_member is None:
 
         await interaction.response.send_message(
-            "❌ I could not find my bot member in this server.",
+            "❌ I could not find my bot member.",
             ephemeral=True
         )
 
         return
-
 
     # -----------------------------------------------------
     # PERMISSIONS
@@ -159,7 +354,8 @@ async def create_ticket(
             view_channel=True,
             send_messages=True,
             read_message_history=True,
-            attach_files=True
+            attach_files=True,
+            embed_links=True
         ),
 
         bot_member: discord.PermissionOverwrite(
@@ -171,14 +367,13 @@ async def create_ticket(
         )
     }
 
-
     # -----------------------------------------------------
     # CHANNEL NAME
     # -----------------------------------------------------
 
     username = interaction.user.name.lower()
 
-    channel_name = f"ticket-{username}"
+    channel_name = f"demo-{username}"
 
     channel_name = (
         channel_name
@@ -186,34 +381,31 @@ async def create_ticket(
         .replace("_", "-")
     )
 
-    # Keep within Discord's channel-name limit.
     channel_name = channel_name[:100]
 
-
     # -----------------------------------------------------
-    # CREATE TICKET CHANNEL
+    # CREATE PRIVATE CHANNEL
     # -----------------------------------------------------
 
     try:
 
         ticket_channel = await guild.create_text_channel(
-
             name=channel_name,
-
             category=category,
-
             overwrites=overwrites,
-
             topic=(
-                f"ticket-owner:{interaction.user.id} "
-                f"| ticket-type:{ticket_type}"
+                f"showcase-owner:{interaction.user.id} "
+                f"| showcase-demo:true"
             )
         )
 
     except discord.Forbidden:
 
         await interaction.response.send_message(
-            "❌ I don't have permission to create ticket channels.",
+            (
+                "❌ I don't have permission to create "
+                "the demo ticket."
+            ),
             ephemeral=True
         )
 
@@ -222,108 +414,170 @@ async def create_ticket(
     except discord.HTTPException as error:
 
         await interaction.response.send_message(
-            f"❌ Could not create the ticket channel: {error}",
+            f"❌ Could not create the demo ticket: {error}",
             ephemeral=True
         )
 
         return
 
-
     # -----------------------------------------------------
-    # TICKET EMBED
+    # MAIN DEMO EMBED
     # -----------------------------------------------------
 
     embed = discord.Embed(
-
-        title="🎫 Ticket Bot",
-
+        title="🚀 Welcome to Your Custom Bot Demo!",
         description=(
-            "Welcome to your private ticket!\n\n"
+            "🎉 **Welcome! You are now inside a private "
+            "demo ticket.**\n\n"
 
-            f"👤 **User:** {interaction.user.mention}\n"
-            f"🆔 **User ID:** `{interaction.user.id}`\n\n"
+            "This is not just a normal ticket. This is a "
+            "**small preview of what your own custom Discord "
+            "bot could look like.**\n\n"
 
-            "This is a demonstration of a private "
-            "ticket system.\n\n"
+            "✨ Everything you see here can be changed.\n\n"
 
-            "✨ The complete bot can be customized "
-            "to your requirements."
+            "🎨 **Colors** can be changed.\n"
+            "📝 **Texts** can be changed.\n"
+            "🔘 **Button names** can be changed.\n"
+            "😀 **Emojis** can be changed.\n"
+            "📦 **Embeds** can be changed.\n"
+            "⚙️ **Functions** can be changed.\n"
+            "🔐 **Permissions** can be changed.\n"
+            "📁 **Categories and channels** can be changed.\n"
+            "💬 **Messages and responses** can be changed.\n\n"
+
+            "🔥 **You are not limited to this design.**\n\n"
+
+            "This demo is simply an example. Your final bot "
+            "can look completely different and can be built "
+            "around exactly what you want.\n\n"
+
+            "💡 **Your idea. Your design. Your bot.**"
         ),
-
         color=discord.Color.blurple()
     )
 
+    # -----------------------------------------------------
+    # CUSTOMIZATION FIELD
+    # -----------------------------------------------------
+
+    embed.add_field(
+        name="🎨 Make It Your Own",
+        value=(
+            "Imagine this bot with your own colors, your own "
+            "branding, your own messages and your own style. "
+            "Nothing here has to stay the way it is in this demo."
+        ),
+        inline=False
+    )
 
     # -----------------------------------------------------
-    # FEATURES
+    # BUTTON FIELD
     # -----------------------------------------------------
 
     embed.add_field(
-
-        name="🛠️ Ticket System",
-
+        name="🔘 Buttons? You Decide!",
         value=(
-            "Private tickets can be used for "
-            "support, orders and many other purposes."
-        ),
+            "You don't have to use only two or three buttons. "
+            "Depending on your project, you can have multiple "
+            "buttons, menus and interactive options.\n\n"
 
+            "🔹 2 buttons\n"
+            "🔹 3 buttons\n"
+            "🔹 5 buttons\n"
+            "🔹 10 buttons\n"
+            "🔹 Or a completely different system\n\n"
+
+            "Each button can have its own name, emoji, color, "
+            "message and function."
+        ),
         inline=False
     )
 
+    # -----------------------------------------------------
+    # FEATURES FIELD
+    # -----------------------------------------------------
 
     embed.add_field(
-
-        name="🎨 Fully Customizable",
-
+        name="⚡ What Can Be Customized?",
         value=(
-            "Buttons, messages, embeds, permissions, "
-            "channels and features can all be customized."
+            "💬 Messages\n"
+            "🎨 Colors\n"
+            "🔘 Buttons\n"
+            "📋 Menus\n"
+            "🤖 Bot functions\n"
+            "🔐 Permissions\n"
+            "📁 Channels\n"
+            "📦 Embeds\n"
+            "✨ Branding\n"
+            "⚙️ Automations\n"
+            "🚀 And much more!"
         ),
-
         inline=False
     )
 
+    # -----------------------------------------------------
+    # SALES / CALL TO ACTION
+    # -----------------------------------------------------
 
     embed.add_field(
-
-        name="⚡ Built Around You",
-
+        name="💎 Want Something Like This?",
         value=(
-            "Your own bot can be designed completely "
-            "according to your ideas."
-        ),
+            "If you like the idea of having a custom Discord "
+            "bot, this demo is only the beginning.\n\n"
 
+            "🚀 Tell us what you have in mind and the bot can "
+            "be designed around your vision.\n\n"
+
+            "✨ Your server.\n"
+            "✨ Your ideas.\n"
+            "✨ Your design.\n"
+            "✨ Your features.\n"
+            "✨ Your bot.\n\n"
+
+            "**Don't settle for a standard bot when your idea "
+            "can be built around you.**"
+        ),
         inline=False
     )
-
 
     embed.set_footer(
-        text="Demo Ticket • Fully customizable"
+        text="🎫 Demo Ticket • Everything is customizable"
     )
 
-
     # -----------------------------------------------------
-    # SEND TICKET MESSAGE
+    # SEND DEMO MESSAGE
     # -----------------------------------------------------
 
     try:
 
         await ticket_channel.send(
-
             content=(
-                f"👋 Welcome {interaction.user.mention}!\n\n"
-                f"Your **{ticket_type}** ticket has been created."
+                f"👋 **Welcome {interaction.user.mention}!**\n\n"
+                "🔥 Your private demo is ready!"
             ),
-
             embed=embed,
+            view=DemoActionView()
+        )
 
+        await ticket_channel.send(
+            (
+                "👇 **Try the buttons below!**\n\n"
+                "🤖 **Order Bot** and ✨ **Your Choice** are "
+                "example functions. Their names, messages and "
+                "actions can all be replaced with your own ideas.\n\n"
+                "🔒 Use **Close Ticket** whenever you are finished."
+            ),
             view=CloseTicketView()
         )
 
     except discord.Forbidden:
 
         await interaction.response.send_message(
-            "❌ The ticket was created, but I cannot send messages there.",
+            (
+                "❌ The ticket was created, but I cannot "
+                "send messages inside it."
+            ),
             ephemeral=True
         )
 
@@ -332,33 +586,32 @@ async def create_ticket(
     except discord.HTTPException as error:
 
         await interaction.response.send_message(
-            f"❌ The ticket was created, but the message failed: {error}",
+            f"❌ The ticket was created, but an error occurred: {error}",
             ephemeral=True
         )
 
         return
 
-
     # -----------------------------------------------------
-    # PRIVATE CONFIRMATION
+    # PRIVATE REDIRECT MESSAGE
     # -----------------------------------------------------
 
     await interaction.response.send_message(
-
-        content=(
-            "✅ **Your ticket has been created!**\n\n"
-            f"➡️ Go here: {ticket_channel.mention}"
+        (
+            "🎉 **Your Demo Ticket is Ready!**\n\n"
+            "🚀 Click below to enter your private demo:\n\n"
+            f"🎫 {ticket_channel.mention}\n\n"
+            "✨ Enjoy exploring the demo!"
         ),
-
         ephemeral=True
     )
 
 
 # =========================================================
-# TRY DEMO VIEW
+# SHOWCASE VIEW
 # =========================================================
 
-class TicketBotDemoView(discord.ui.View):
+class ShowcaseView(discord.ui.View):
 
     def __init__(self):
 
@@ -366,127 +619,20 @@ class TicketBotDemoView(discord.ui.View):
             timeout=None
         )
 
-
     @discord.ui.button(
-
-        label="🎫 Try Demo",
-
+        label="🎫 Create Demo Ticket",
         style=discord.ButtonStyle.green,
-
-        custom_id="ticket_bot_try_demo"
+        custom_id="create_showcase_demo"
     )
-    async def try_demo(
-
+    async def create_demo(
         self,
-
         interaction: discord.Interaction,
-
         button: discord.ui.Button
     ):
 
-        # Directly create the ticket.
-        #
-        # Nothing is sent into the showcase channel.
-
-        await create_ticket(
-            interaction,
-            "Demo"
+        await create_demo_ticket(
+            interaction
         )
-
-
-# =========================================================
-# CLOSE TICKET VIEW
-# =========================================================
-
-class CloseTicketView(discord.ui.View):
-
-    def __init__(self):
-
-        super().__init__(
-            timeout=None
-        )
-
-
-    @discord.ui.button(
-
-        label="🔒 Close Ticket",
-
-        style=discord.ButtonStyle.red,
-
-        custom_id="close_ticket"
-    )
-    async def close_ticket(
-
-        self,
-
-        interaction: discord.Interaction,
-
-        button: discord.ui.Button
-    ):
-
-        channel = interaction.channel
-
-
-        # -------------------------------------------------
-        # CHANNEL CHECK
-        # -------------------------------------------------
-
-        if channel is None:
-
-            return
-
-
-        # -------------------------------------------------
-        # TICKET CHECK
-        # -------------------------------------------------
-
-        if (
-            not channel.topic
-            or "ticket-owner:" not in channel.topic
-        ):
-
-            await interaction.response.send_message(
-
-                "❌ This is not a ticket channel.",
-
-                ephemeral=True
-            )
-
-            return
-
-
-        # -------------------------------------------------
-        # CLOSE MESSAGE
-        # -------------------------------------------------
-
-        await interaction.response.send_message(
-
-            "🔒 This ticket will be closed...",
-
-            ephemeral=False
-        )
-
-
-        # -------------------------------------------------
-        # DELETE CHANNEL
-        # -------------------------------------------------
-
-        try:
-
-            await channel.delete()
-
-        except discord.Forbidden:
-
-            print(
-                "❌ I don't have permission to delete "
-                "this ticket channel."
-            )
-
-        except discord.HTTPException as error:
-
-            print(
-                f"❌ Could not delete ticket channel: {error}"
-            )
 
 
 # =========================================================
@@ -500,7 +646,11 @@ class ShowcaseBot(commands.Bot):
         # Register persistent buttons.
 
         self.add_view(
-            TicketBotDemoView()
+            ShowcaseView()
+        )
+
+        self.add_view(
+            DemoActionView()
         )
 
         self.add_view(
@@ -509,9 +659,7 @@ class ShowcaseBot(commands.Bot):
 
 
 bot = ShowcaseBot(
-
     command_prefix="!",
-
     intents=intents
 )
 
@@ -531,16 +679,17 @@ async def on_ready():
         f"✅ Showcase Bot is online as {bot.user}"
     )
 
-    print(
-        f"🆔 Bot ID: {bot.user.id}"
-    )
+    if bot.user:
+        print(
+            f"🆔 Bot ID: {bot.user.id}"
+        )
 
     print(
         "========================================"
     )
 
-
-    # Prevent duplicate processing after reconnects.
+    # Prevent duplicate showcase checks
+    # after reconnects.
 
     if getattr(
         bot,
@@ -550,21 +699,16 @@ async def on_ready():
 
         return
 
-
     bot.showcase_checked = True
 
-
-    # =====================================================
+    # -----------------------------------------------------
     # FIND SHOWCASE CHANNEL
-    # =====================================================
+    # -----------------------------------------------------
 
     channel = discord.utils.get(
-
         bot.get_all_channels(),
-
         name=SHOWCASE_CHANNEL_NAME
     )
-
 
     if channel is None:
 
@@ -575,15 +719,13 @@ async def on_ready():
 
         return
 
-
     print(
         f"✅ Showcase channel found: #{channel.name}"
     )
 
-
-    # =====================================================
+    # -----------------------------------------------------
     # CHECK EXISTING SHOWCASE
-    # =====================================================
+    # -----------------------------------------------------
 
     try:
 
@@ -597,11 +739,10 @@ async def on_ready():
             ):
 
                 print(
-                    "✅ Ticket Bot showcase already exists."
+                    "✅ Showcase message already exists."
                 )
 
                 return
-
 
     except discord.Forbidden:
 
@@ -611,126 +752,134 @@ async def on_ready():
 
         return
 
-
     except discord.HTTPException as error:
 
         print(
-            f"❌ Could not check channel history: {error}"
+            f"❌ Could not check showcase history: {error}"
         )
 
         return
 
-
-    # =====================================================
+    # -----------------------------------------------------
     # SHOWCASE EMBED
-    # =====================================================
+    # -----------------------------------------------------
 
     embed = discord.Embed(
-
-        title="🎫 Ticket Bot",
-
+        title="🤖✨ CUSTOM DISCORD BOT SHOWCASE ✨🤖",
         description=(
+            "🚀 **Want a Discord bot built around YOUR ideas?**\n\n"
 
-            "A powerful and fully customizable ticket "
-            "system for your Discord server.\n\n"
+            "Welcome to our interactive bot showcase! 🎉\n\n"
 
-            "✨ **Make it your own.**\n"
+            "This is a live demonstration designed to show "
+            "you just how flexible a custom Discord bot can be.\n\n"
 
-            "Design the bot exactly the way you want it — "
-            "from buttons and messages to permissions "
-            "and features.\n\n"
+            "🎨 **Your design.**\n"
+            "💬 **Your messages.**\n"
+            "🔘 **Your buttons.**\n"
+            "⚙️ **Your functions.**\n"
+            "✨ **Your vision.**\n\n"
 
-            "**Your vision. Your design. Your bot.**\n\n"
+            "Nothing in this demo has to stay the way it is. "
+            "The layout, colors, text, buttons, embeds, "
+            "permissions and functions can all be changed "
+            "to match your requirements.\n\n"
 
-            "The showcase is only a demo. Your own bot "
-            "can be built completely around your "
-            "requirements."
+            "🔥 **Ready to see it for yourself?**\n\n"
+
+            "Click the button below and create your own "
+            "private demo ticket!"
         ),
-
         color=discord.Color.blurple()
     )
 
-
-    # =====================================================
-    # FEATURES
-    # =====================================================
+    # -----------------------------------------------------
+    # FEATURE 1
+    # -----------------------------------------------------
 
     embed.add_field(
-
-        name="🛠️ Custom Ticket System",
-
+        name="🎫 Interactive Demo",
         value=(
-            "Create private tickets for support, "
-            "orders or anything else you need."
+            "Create a private demo ticket and explore how "
+            "a custom ticket system can work."
         ),
-
         inline=False
     )
 
+    # -----------------------------------------------------
+    # FEATURE 2
+    # -----------------------------------------------------
 
     embed.add_field(
-
-        name="🎨 Fully Customizable",
-
+        name="🎨 Completely Customizable",
         value=(
-            "Buttons, messages, embeds, permissions, "
-            "channels and features can all be changed."
+            "Colors, messages, emojis, buttons, embeds, "
+            "permissions, channels and features can all "
+            "be designed around your needs."
         ),
-
         inline=False
     )
 
+    # -----------------------------------------------------
+    # FEATURE 3
+    # -----------------------------------------------------
 
     embed.add_field(
-
-        name="⚡ Built Around You",
-
+        name="🔘 Unlimited Button Ideas",
         value=(
-            "Your final bot doesn't have to look like "
-            "this demo. It can be designed exactly "
-            "according to your ideas."
+            "You are not limited to just two or three "
+            "buttons. Depending on the project, you can "
+            "have multiple buttons, menus and interactive "
+            "features."
         ),
-
         inline=False
     )
 
+    # -----------------------------------------------------
+    # FEATURE 4
+    # -----------------------------------------------------
 
     embed.add_field(
-
-        name="🚀 Want to see it in action?",
-
+        name="⚡ Built Around Your Vision",
         value=(
-            "Click **🎫 Try Demo** below to create "
-            "your own private demo ticket."
+            "This showcase is only an example. Your own "
+            "bot can be completely different and can be "
+            "designed around exactly what you want."
         ),
-
         inline=False
     )
 
+    # -----------------------------------------------------
+    # CALL TO ACTION
+    # -----------------------------------------------------
+
+    embed.add_field(
+        name="🚀 Experience The Demo",
+        value=(
+            "Click **🎫 Create Demo Ticket** below and "
+            "see what a custom bot experience could look like!"
+        ),
+        inline=False
+    )
 
     embed.set_footer(
-
-        text="Demo only • Fully customizable"
+        text="💎 Your Idea • Your Design • Your Bot 💎"
     )
 
-
-    # =====================================================
+    # -----------------------------------------------------
     # SEND SHOWCASE
-    # =====================================================
+    # -----------------------------------------------------
 
     try:
 
         await channel.send(
-
             embed=embed,
-
-            view=TicketBotDemoView()
+            view=ShowcaseView()
         )
 
         print(
-            "✅ Ticket Bot showcase created successfully."
+            "✅ Showcase created successfully."
         )
-
 
     except discord.Forbidden:
 
@@ -739,11 +888,10 @@ async def on_ready():
             "messages in the showcase channel."
         )
 
-
     except discord.HTTPException as error:
 
         print(
-            f"❌ Could not create showcase: {error}"
+            f"❌ Could not send showcase: {error}"
         )
 
 
