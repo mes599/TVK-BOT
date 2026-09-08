@@ -15,10 +15,10 @@ TICKET_CATEGORY_NAME = "Tickets"
 # BOT TOKEN
 # =========================================================
 
-# The token is taken from the environment variable
-# DISCORD_BOT_TOKEN in Render.
-#
-# NEVER put your token directly into this file.
+# Token comes from Render Environment Variables.
+# Variable name:
+# DISCORD_BOT_TOKEN
+
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
 
@@ -26,6 +26,9 @@ BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 # INTENTS
 # =========================================================
 
+# Default intents are enough for this showcase bot.
+# DO NOT use discord.Intents.all()
+# DO NOT enable message_content unless you actually need it.
 intents = discord.Intents.default()
 
 
@@ -62,9 +65,7 @@ class TicketBotDemoView(discord.ui.View):
 
         embed.add_field(
             name="🛠️ Support",
-            value=(
-                "Need help? Create a private support ticket."
-            ),
+            value="Need help? Create a private support ticket.",
             inline=False
         )
 
@@ -177,6 +178,24 @@ async def create_ticket(
             return
 
     # -----------------------------------------------------
+    # BOT MEMBER
+    # -----------------------------------------------------
+
+    bot_member = guild.me
+
+    if bot_member is None:
+        bot_member = guild.get_member(bot.user.id)
+
+    if bot_member is None:
+
+        await interaction.response.send_message(
+            "❌ I could not find my bot member in this server.",
+            ephemeral=True
+        )
+
+        return
+
+    # -----------------------------------------------------
     # PERMISSIONS
     # -----------------------------------------------------
 
@@ -193,7 +212,7 @@ async def create_ticket(
             attach_files=True
         ),
 
-        guild.me: discord.PermissionOverwrite(
+        bot_member: discord.PermissionOverwrite(
             view_channel=True,
             send_messages=True,
             read_message_history=True,
@@ -211,7 +230,6 @@ async def create_ticket(
         f"{interaction.user.name.lower()}"
     )
 
-    # Discord channel names may only use certain characters
     channel_name = (
         channel_name
         .replace(" ", "-")
@@ -407,8 +425,11 @@ class CloseTicketView(discord.ui.View):
         if channel is None:
             return
 
-        # Only allow closing if this is a ticket channel
-        if not channel.topic or "ticket-owner:" not in channel.topic:
+        # Only allow closing actual ticket channels.
+        if (
+            not channel.topic
+            or "ticket-owner:" not in channel.topic
+        ):
 
             await interaction.response.send_message(
                 "❌ This is not a ticket channel.",
@@ -422,7 +443,12 @@ class CloseTicketView(discord.ui.View):
             ephemeral=False
         )
 
-        await channel.delete()
+        try:
+            await channel.delete()
+        except discord.Forbidden:
+            pass
+        except discord.HTTPException:
+            pass
 
 
 # =========================================================
@@ -459,25 +485,21 @@ bot = ShowcaseBot(
 @bot.event
 async def on_ready():
 
-    print(
-        "========================================"
-    )
+    print("========================================")
+    print(f"✅ Showcase Bot is online as {bot.user}")
+    print(f"🆔 Bot ID: {bot.user.id}")
+    print("========================================")
 
-    print(
-        f"✅ Showcase Bot is online as {bot.user}"
-    )
+    # Prevent the showcase from being processed repeatedly
+    # after reconnects.
+    if getattr(bot, "showcase_checked", False):
+        return
 
-    print(
-        f"🆔 Bot ID: {bot.user.id}"
-    )
+    bot.showcase_checked = True
 
-    print(
-        "========================================"
-    )
-
-    # =====================================================
+    # -----------------------------------------------------
     # FIND SHOWCASE CHANNEL
-    # =====================================================
+    # -----------------------------------------------------
 
     channel = discord.utils.get(
         bot.get_all_channels(),
@@ -487,8 +509,7 @@ async def on_ready():
     if channel is None:
 
         print(
-            f"❌ Channel '{SHOWCASE_CHANNEL_NAME}' "
-            "was not found."
+            f"❌ Channel '{SHOWCASE_CHANNEL_NAME}' was not found."
         )
 
         return
@@ -497,15 +518,13 @@ async def on_ready():
         f"✅ Showcase channel found: #{channel.name}"
     )
 
-    # =====================================================
+    # -----------------------------------------------------
     # CHECK EXISTING SHOWCASE
-    # =====================================================
+    # -----------------------------------------------------
 
     try:
 
-        async for message in channel.history(
-            limit=50
-        ):
+        async for message in channel.history(limit=50):
 
             if (
                 message.author == bot.user
@@ -534,9 +553,9 @@ async def on_ready():
 
         return
 
-    # =====================================================
+    # -----------------------------------------------------
     # SHOWCASE EMBED
-    # =====================================================
+    # -----------------------------------------------------
 
     embed = discord.Embed(
 
@@ -561,9 +580,9 @@ async def on_ready():
         color=discord.Color.blurple()
     )
 
-    # =====================================================
+    # -----------------------------------------------------
     # FEATURES
-    # =====================================================
+    # -----------------------------------------------------
 
     embed.add_field(
         name="🛠️ Custom Ticket System",
@@ -606,9 +625,9 @@ async def on_ready():
         text="Demo only • Fully customizable"
     )
 
-    # =====================================================
+    # -----------------------------------------------------
     # SEND SHOWCASE
-    # =====================================================
+    # -----------------------------------------------------
 
     try:
 
