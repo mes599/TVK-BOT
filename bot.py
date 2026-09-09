@@ -127,6 +127,14 @@ class PaymentConfirmationModal(
             return
 
         # =================================================
+        # ACKNOWLEDGE INTERACTION IMMEDIATELY
+        # =================================================
+
+        await interaction.response.defer(
+            ephemeral=True
+        )
+
+        # =================================================
         # GET BOT OWNER
         # =================================================
 
@@ -201,9 +209,7 @@ class PaymentConfirmationModal(
 
         embed.add_field(
             name="🔎 Status",
-            value=(
-                "⏳ Awaiting manual verification."
-            ),
+            value="⏳ Awaiting manual verification.",
             inline=False
         )
 
@@ -243,18 +249,26 @@ class PaymentConfirmationModal(
         # CUSTOMER CONFIRMATION
         # =================================================
 
-        await interaction.response.send_message(
+        try:
 
-            "✅ **Payment information submitted!**\n\n"
+            await interaction.followup.send(
 
-            f"💳 Payment method: "
-            f"**{self.payment_method.value}**\n\n"
+                "✅ **Payment information submitted!**\n\n"
 
-            "Your payment information has been sent "
-            "to the server owner for manual verification.",
+                f"💳 Payment method: "
+                f"**{self.payment_method.value}**\n\n"
 
-            ephemeral=True
-        )
+                "Your payment information has been sent "
+                "to the server owner for manual verification.",
+
+                ephemeral=True
+            )
+
+        except discord.HTTPException as error:
+
+            print(
+                f"⚠️ Could not send customer confirmation: {error}"
+            )
 
         # =================================================
         # MESSAGE INSIDE TICKET
@@ -276,11 +290,6 @@ class PaymentConfirmationModal(
             print(
                 f"⚠️ Could not send payment notification: {error}"
             )
-
-
-# =========================================================
-# PAYMENT CONFIRM BUTTON
-# =========================================================
 
 class PaymentCompletedButton(
     discord.ui.Button
@@ -2276,3 +2285,4 @@ else:
     bot.run(
         BOT_TOKEN
     )
+
