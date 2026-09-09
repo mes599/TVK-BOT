@@ -1,0 +1,15 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Local environments and test output
+.venv/
+venv/
+.pytest_cache/
+coverage.xml

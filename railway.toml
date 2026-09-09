@@ -1,0 +1,7 @@
+[build]
+builder = "RAILPACK"
+
+[deploy]
+preDeployCommand = ["python -m database migrate"]
+startCommand = "python bot.py"
+restartPolicyType = "ALWAYS"
