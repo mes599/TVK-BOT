@@ -3992,6 +3992,28 @@ class TicketBot(
             )
 
         # -------------------------------------------------
+        # CONTENT POSTING SYSTEM (CPS)
+        # -------------------------------------------------
+
+        if os.getenv("OPENAI_API_KEY"):
+
+            from cps_agent import CPSCog
+
+            await self.add_cog(
+                CPSCog(
+                    self,
+                    owner_id=OWNER_ID
+                )
+            )
+
+        else:
+
+            print(
+                "⚠️ OPENAI_API_KEY is not set - the "
+                "tvk-ai-cps-channel rewriter is disabled."
+            )
+
+        # -------------------------------------------------
         # PERSISTENT VIEWS
         # -------------------------------------------------
 
