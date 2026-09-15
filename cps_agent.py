@@ -23,8 +23,8 @@ CPS_CHANNEL_NAME = "tvk-ai-cps-channel🔒"
 # it should be posted to. Add more entries here to support
 # more target channels.
 CPS_TARGET_CHANNELS = {
-    "server-news": "server-news📢",
-    "discounts": "discounts🏷️",
+    "server-news": "server-news🗞️",
+    "discounts": "discounts💸",
     "challenge-vote": "challenge-vote🗳️",
 }
 
